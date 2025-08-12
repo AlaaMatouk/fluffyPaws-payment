@@ -24,6 +24,8 @@ exports.createPaymentSession = async (req, res) => {
       shelterId,
       amount,
       currency: "EGP",
+      // Booking approval lifecycle (separate from paymentStatus)
+      bookingStatus: "pending",
       paymentStatus: "pending", // keep "pending" to avoid breaking existing logic
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
 
@@ -69,6 +71,40 @@ exports.createPaymentSession = async (req, res) => {
   } catch (error) {
     console.error("createPaymentSession error:", error);
     return res.status(500).json({ message: "Failed to initiate payment." });
+  }
+};
+
+// Update bookingStatus: "pending" | "accepted" | "rejected" | "cancelled"
+exports.updateBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, actorId = null, note = null } = req.body;
+
+    const allowed = ["pending", "accepted", "rejected", "cancelled"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value." });
+    }
+
+    const ref = db.collection("bookings").doc(id);
+    const snap = await ref.get();
+    if (!snap.exists)
+      return res.status(404).json({ message: "Booking not found." });
+
+    const stamp = admin.firestore.FieldValue.serverTimestamp();
+    const update = {
+      bookingStatus: status,
+      statusUpdatedAt: stamp,
+      statusUpdatedBy: actorId,
+    };
+    if (status === "accepted") update.acceptedAt = stamp;
+    if (status === "rejected") update.rejectedAt = stamp;
+    if (note) update.statusNote = note;
+
+    await ref.set(update, { merge: true });
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("updateBookingStatus error:", e);
+    return res.status(500).json({ message: "Failed to update status." });
   }
 };
 
