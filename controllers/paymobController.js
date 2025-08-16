@@ -39,7 +39,7 @@ exports.createPaymentSession = async (req, res) => {
       nights: bookingData.nights ?? null, // duration
       petCount: bookingData.petCount ?? null,
       petIds: Array.isArray(bookingData.petIds) ? bookingData.petIds : [],
-      pets: Array.isArray(bookingData.pets) ? bookingData.pets : [], // lightweight pet snapshots
+      // pets: Array.isArray(bookingData.pets) ? bookingData.pets : [], // lightweight pet snapshots
 
       //  minimal customer snapshot
       customer: {
